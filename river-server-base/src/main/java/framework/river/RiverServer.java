@@ -1,6 +1,7 @@
 package framework.river;
 
 import framework.river.lang.Future;
+import framework.river.lang.Nullable;
 
 /**
  * The CyGrid Server.  Different implementations will offer different non-functional
@@ -9,6 +10,13 @@ import framework.river.lang.Future;
 public interface RiverServer {
 
     public RiverRequest GET( String resourceRef );
+    public RiverRequest PUT( String resourceRef, Nullable<?> body );
+    public RiverRequest POST( String resourceRef, Nullable<?> body );
+    public RiverRequest PATCH( String resourceRef, Nullable<?> body );
+    public RiverRequest HEAD( String resourceRef );
+    public RiverRequest DELETE( String resourceRef );
+    public RiverRequest SUBSCRIBE( String resourceRef );
+    public RiverRequest UNSUBSCRIBE( String resourceRef );
 
 
     public Future<RiverResponse> process( RiverRequest req );

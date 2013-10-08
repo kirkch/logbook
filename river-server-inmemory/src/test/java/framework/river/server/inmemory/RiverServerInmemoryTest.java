@@ -9,6 +9,7 @@ import org.junit.Test;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -16,7 +17,12 @@ import static org.junit.Assert.fail;
  *
  */
 public class RiverServerInmemoryTest {
+
     private static final long MAX_WAIT = 5000;
+
+    private static final UserDTO JOHN  = new UserDTO("1", "John");
+    private static final UserDTO SIMON = new UserDTO("2", "Simon");
+
 
     private RiverServer server = new RiverServerInmemory( new RiverSystemInmemory() );
 
@@ -41,40 +47,63 @@ public class RiverServerInmemoryTest {
     public void givenNoResourceRegisteredToURL_deliverGETRequest_expectNoResourceFoundResponse() {
         RiverResponse response = fetch( server.GET("/user/1") );
 
+        assertNoResourceFoundFor(response);
 
-        final AtomicBoolean hasResultBeenProcessed = new AtomicBoolean(false);
-        response.invoke( new RiverResponseCallback() {
-            public void noResourceFound(String requestId, Nullable<String> userIdNbl, Nullable<String> userNameNbl, Nullable<String> diagnosticMessageNbl) {
-                hasResultBeenProcessed.set(true);
-            }
+        assertEquals( "no resource handler registered for '/user/1'", response.getDiagnosticMessageNbl().getValueNbl() );
+    }
 
-            public void remoteHost(String requestId, Nullable<String> userIdNbl, Nullable<String> userNameNbl, Nullable<String> diagnosticMessageNbl, String remoteHost, int remotePort) {
-                fail("expected noResourceFound");
-            }
+    @Test
+    public void givenNoResourceRegisteredToURL_deliverPUTRequest_expectNoResourceFoundResponse() {
+        assertNoResourceFoundFor( server.PUT("/user/1", Nullable.createNullable(JOHN)) );
+    }
 
-            public void processed(String requestId, Nullable<String> userIdNbl, Nullable<String> userNameNbl, Nullable<String> diagnosticMessageNbl, int httpStatus, Nullable<Object> bodyNbl, long cacheForSeconds, Nullable<DTM> lastModifiedDtmNbl) {
-                fail("expected noResourceFound");
-            }
-        });
+    @Test
+    public void givenNoResourceRegisteredToURL_deliverPOSTRequest_expectNoResourceFoundResponse() {
+        assertNoResourceFoundFor( server.POST("/user/1", Nullable.createNullable(JOHN)) );
+    }
 
-        assertTrue( "noResourceFound was not called", hasResultBeenProcessed.get() );
+    @Test
+    public void givenNoResourceRegisteredToURL_deliverPATCHRequest_expectNoResourceFoundResponse() {
+        assertNoResourceFoundFor( server.PATCH("/user/1", Nullable.createNullable(JOHN)) );
+    }
+
+    @Test
+    public void givenNoResourceRegisteredToURL_deliverHEADRequest_expectNoResourceFoundResponse() {
+        assertNoResourceFoundFor( server.HEAD("/user/1") );
+    }
+
+    @Test
+    public void givenNoResourceRegisteredToURL_deliverDELETERequest_expectNoResourceFoundResponse() {
+        assertNoResourceFoundFor( server.DELETE("/user/1") );
+    }
+
+    @Test
+    public void givenNoResourceRegisteredToURL_deliverSUBSCRIBERequest_expectNoResourceFoundResponse() {
+        assertNoResourceFoundFor( server.SUBSCRIBE("/user/1") );
+    }
+
+    @Test
+    public void givenNoResourceRegisteredToURL_deliverUNSUBSCRIBERequest_expectNoResourceFoundResponse() {
+        assertNoResourceFoundFor( server.UNSUBSCRIBE("/user/1") );
     }
 
 
 
-    //
-    // givenNoResourceRegisteredToURL_deliverPUTRequest_expectNoResourceFoundResponse
-    // givenNoResourceRegisteredToURL_deliverPOSTRequest_expectNoResourceFoundResponse
-    // givenNoResourceRegisteredToURL_deliverPATCHRequest_expectNoResourceFoundResponse
-    // givenNoResourceRegisteredToURL_deliverHEADRequest_expectNoResourceFoundResponse
-    // givenNoResourceRegisteredToURL_deliverDELETERequest_expectNoResourceFoundResponse
-    // givenNoResourceRegisteredToURL_deliverSUBSCRIBERequest_expectNoResourceFoundResponse
-    // givenNoResourceRegisteredToURL_deliverUNSUBSCRIBERequest_expectNoResourceFoundResponse
-
 
 // givenUnInstantiatedResourceAtURL
 
-    // givenUnInstantiatedResourceAtURL_deliverGETRequest_expectNoResourceFoundResponse
+//    @Test
+    public void givenUnInstantiatedResourceAtURL_deliverGETRequest_expectNoResourceFoundResponse() {
+        server.addResource( "/user/1", UserResource.class );
+
+        RiverResponse response = fetch( server.GET("/user/1") );
+
+        assertNoResourceFoundFor(response);
+        assertEquals( "resource handler found for '/user/1', however no data was available", response.getDiagnosticMessageNbl().getValueNbl() );
+    }
+
+
+    //
     // givenUnInstantiatedResourceAtURL_deliverHEADRequest_expectNoResourceFoundResponse
     // givenUnInstantiatedResourceAtURL_deliverDELETERequest_expectNoResourceFoundResponse
     // givenUnInstantiatedResourceAtURL_deliverSUBSCRIBERequest_expectNoResourceFoundResponse
@@ -114,6 +143,32 @@ public class RiverServerInmemoryTest {
 
     private RiverResponse fetch( RiverRequest req ) {
         return server.process(req).spinUntilComplete(MAX_WAIT).getResultNoBlock();
+    }
+
+
+    private void assertNoResourceFoundFor( RiverRequest req ) {
+        RiverResponse response = fetch( req );
+
+        assertNoResourceFoundFor(response);
+    }
+
+    private void assertNoResourceFoundFor(RiverResponse response) {
+        final AtomicBoolean hasResultBeenProcessed = new AtomicBoolean(false);
+        response.invoke( new RiverResponseCallback() {
+            public void noResourceFound(String requestId, Nullable<String> userIdNbl, Nullable<String> userNameNbl, Nullable<String> diagnosticMessageNbl) {
+                hasResultBeenProcessed.set(true);
+            }
+
+            public void remoteHost(String requestId, Nullable<String> userIdNbl, Nullable<String> userNameNbl, Nullable<String> diagnosticMessageNbl, String remoteHost, int remotePort) {
+                fail("expected noResourceFound");
+            }
+
+            public void processed(String requestId, Nullable<String> userIdNbl, Nullable<String> userNameNbl, Nullable<String> diagnosticMessageNbl, int httpStatus, Nullable<Object> bodyNbl, long cacheForSeconds, Nullable<DTM> lastModifiedDtmNbl) {
+                fail("expected noResourceFound");
+            }
+        });
+
+        assertTrue( "noResourceFound was not called", hasResultBeenProcessed.get() );
     }
 
 }

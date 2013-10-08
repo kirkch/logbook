@@ -4,6 +4,9 @@ import com.mosaic.lang.time.DTM;
 import framework.river.http.HttpMethodEnum;
 import framework.river.lang.Nullable;
 
+import java.util.Collections;
+import java.util.Map;
+
 
 /**
  *
@@ -19,11 +22,11 @@ public class RiverRequest {
     private long             resourceModificationSequence;
 
     private HttpMethodEnum   httpMethod;
-    private Nullable<Object> requestBodyNbl;
+    private Nullable<?>      requestBodyNbl;
 
     private Nullable<DTM>    ifModifiedSinceNbl;
 
-
+    private Map<String,?>    queryParameters = Collections.emptyMap();
 
     public RiverRequest( DTM startDTM, String requestId, String resourceRef, HttpMethodEnum httpMethod ) {
         this.startDTM    = startDTM;
@@ -146,15 +149,15 @@ public class RiverRequest {
 
 
 
-    public Nullable<Object> getRequestBodyNbl() {
+    public Nullable<?> getRequestBodyNbl() {
         return requestBodyNbl;
     }
 
-    public void setRequestBodyNbl(Nullable<Object> requestBodyNbl) {
+    public void setRequestBodyNbl(Nullable<?> requestBodyNbl) {
         this.requestBodyNbl = requestBodyNbl;
     }
 
-    public RiverRequest withRequestBodyNbl(Nullable<Object> requestBodyNbl) {
+    public RiverRequest withRequestBodyNbl(Nullable<?> requestBodyNbl) {
         this.requestBodyNbl = requestBodyNbl;
 
         return this;
@@ -172,6 +175,18 @@ public class RiverRequest {
 
     public RiverRequest withIfModifiedSinceNbl(Nullable<DTM> ifModifiedSinceNbl) {
         this.ifModifiedSinceNbl = ifModifiedSinceNbl;
+
+        return this;
+    }
+
+
+    @SuppressWarnings("unchecked")
+    public <T> Nullable<T> getQueryParameter( String key ) {
+        return Nullable.createNullable( (T) queryParameters.get(key) );
+    }
+
+    public RiverRequest withQueryParameters( Map<String,?> params ) {
+        this.queryParameters = params;
 
         return this;
     }
