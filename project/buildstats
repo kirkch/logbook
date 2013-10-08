@@ -1,0 +1,8 @@
+#
+#Mon Jul 29 06:56:31 BST 2013
+buildcount_ck=1
+javafile_count=0
+build_duration_compilejava=0.64
+build_duration_total=0.696
+build_duration_filescan=0.0
+build_duration_pomwriter=0.022

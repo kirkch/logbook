@@ -1,0 +1,20 @@
+
+
+# receives new log entries as POST commands
+
+/servers/{serverId}/apps/{appId}/log               -> app.logbook.resources.logs.LogCoordinator
+
+
+
+
+/users/{userId}/log
+/users/{userId}/requests/{requestId}/log
+
+/requests/{requestId}/log
+
+/servers/all/log                                   -> app.logbook.resources.logs.MasterLogResource
+/servers/{serverId}/log
+
+/apps/all/log                                      -> /servers/all/log
+/apps/{appId}/logs
+
