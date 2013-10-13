@@ -2,7 +2,7 @@ package framework.river.server.inmemory;
 
 import com.mosaic.lang.time.DTM;
 import framework.river.*;
-import framework.river.lang.Nullable;
+import com.mosaic.lang.Nullable;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;

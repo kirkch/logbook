@@ -1,6 +1,6 @@
 package framework.river.server.inmemory;
 
-import framework.river.lang.Nullable;
+import com.mosaic.lang.Nullable;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -14,11 +14,26 @@ public class ResourceHandlerRegistryTest {
 
 
     @Test
-    public void givenNoMappings_fetchURL_expectNull() {
-        assertEquals( Nullable.NULL, registry.lookupResourceHandler("/accounts/abc") );
+    public void givenNoMappings_decodeURL_expectNull() {
+        assertEquals( Nullable.NULL, registry.decodeURL("/users/abc") );
     }
 
-    // givenMapping_fetchURLThatDoesNotMatch_expectNull
-    // givenMapping_fetchURLThatDoesMatch_expectNull
+//    @Test
+    public void givenMapping_decodeURLThatDoesNotMatch_expectNull() {
+        registry.addResource( "/users/abc", UserResource.class );
 
+
+        DecodedResourceCall expectedResult = new DecodedResourceCall("/users/abc", UserResource.class);
+
+        assertEquals( expectedResult, registry.decodeURL("/users/abc").getValue() );
+    }
+
+    //
+    // givenMapping_decodeURLThatDoesMatch_expectDecodedRefWithNoParams
+    // givenMapping_decodeURLThatDoesMatch_expectDecodedRefWithNoParams
+    // givenMapping_decodeURLWithEscapedCharactersThatDoesMatch_expectDecodeToUnescapeCharacters
+
+
+
+    // nested examples
 }
