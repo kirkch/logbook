@@ -19,17 +19,25 @@ public class ResourceHandlerRegistry {
     public void addResource( String encodedURLRef, Class<?> resourceClass ) {
         ConsList<String> urlFragments = splitURL( encodedURLRef );
 
-        registry = registry.addResource( urlFragments, resourceClass );
+        registry.addResource( urlFragments, resourceClass );
     }
 
     public void addAlias( String sourceEncodedURLRef, String destinationEncodedUrlRef ) {
 
     }
 
-    public Nullable<DecodedResourceCall> decodeURL( String relativeURL ) {
+    public Nullable<DecodedResourceCall> decodeURL( final String relativeURL ) {
         ConsList<String> urlFragments = splitURL( relativeURL );
 
-        return registry.decode( urlFragments );
+        Nullable<DecodedResourceCall> resultNbl = registry.matchURL(urlFragments);
+
+        return resultNbl.mapValue( new Function1<DecodedResourceCall, DecodedResourceCall>() {
+            public DecodedResourceCall invoke( DecodedResourceCall v ) {
+                v.setRelativeURL(relativeURL);
+
+                return v;
+            }
+        });
     }
 
     @SuppressWarnings("ManualArrayToCollectionCopy")
@@ -40,7 +48,7 @@ public class ResourceHandlerRegistry {
         ConsList<String> urlFragmentsResult = ConsList.Nil;
 
         for ( int i=splitString.length-1; i>0; i-- ) {
-            urlFragmentsResult.cons(splitString[i]);
+            urlFragmentsResult = urlFragmentsResult.cons(splitString[i]);
         }
 
         return urlFragmentsResult;
@@ -50,8 +58,16 @@ public class ResourceHandlerRegistry {
 
 
     private static RegistryTree createNodeFor( String urlFragmentTemplate ) {
+// todo
+        if ( urlFragmentTemplate.startsWith("$") ) {
+            // todo ${}
+            // todo ${:}
+            // todo blank names
 
-        return new MatchStaticTextNode( urlFragmentTemplate );
+            return new ExtractParameterNode( urlFragmentTemplate.substring(1) );
+        } else {
+            return new MatchStaticTextNode( urlFragmentTemplate );
+        }
     }
 
 
@@ -59,36 +75,79 @@ public class ResourceHandlerRegistry {
 
     private static abstract class RegistryTree {
 
-        private ConsList<RegistryTree> children = ConsList.Nil;
+        private Class                  rootResource;
+        private ConsList<RegistryTree> children     = ConsList.Nil;
 
-        public abstract Nullable<DecodedResourceCall> decode( ConsList<String> urlFragments );
 
+        public Nullable<DecodedResourceCall> matchURL( final ConsList<String> urlFragments ) {
+            if ( urlFragments.isEmpty() ) {
+                return rootResource == null ? Nullable.NULL : Nullable.createNullable(new DecodedResourceCall(rootResource));
+            }
 
-        protected Nullable<DecodedResourceCall> selectAndDecodeFirstMatchingChild(final ConsList<String> urlFragments) {
-            return children.mapSingleValue(new Function1<Nullable<DecodedResourceCall>, RegistryTree>() {
-                public Nullable<DecodedResourceCall> invoke(RegistryTree child) {
-                    return child.decode(urlFragments);
-                }
-            });
+            return depthFirstRecursiveScanForFirstUrlMatch(urlFragments);
         }
 
+
+        private Nullable<DecodedResourceCall> depthFirstRecursiveScanForFirstUrlMatch(final ConsList<String> urlFragments) {
+            final String head = urlFragments.head();   // NB already asserted from matchURL as being safe
+
+            return children.mapSingleValue(
+                    new Function1<Nullable<DecodedResourceCall>, RegistryTree>() {
+                        public Nullable<DecodedResourceCall> invoke( final RegistryTree child ) {
+                            if ( !child.matches(head) ) {
+                                return Nullable.NULL;
+                            }
+
+                            Nullable<DecodedResourceCall> decodedResourceCallNbl = child.matchURL(urlFragments.tail());
+
+                            return decodedResourceCallNbl.mapValue(
+                                    new Function1<DecodedResourceCall,DecodedResourceCall>() {
+                                        public DecodedResourceCall invoke( DecodedResourceCall v ) {
+                                            child.decorateResourceCallResult( v, head );
+
+                                            return v;
+                                        }
+                                    }
+                            );
+                        }
+                    }
+            );
+        }
+
+        /**
+         * Invoked on matches to give the node a chance to modify the DecodedResourceCall result.
+         */
+        protected abstract void decorateResourceCallResult( DecodedResourceCall result, String urlFragment );
+
         public abstract boolean matches( String urlFragment );
-        public abstract RegistryTree addResource( ConsList<String> urlFragmentTemplates, Class<?> resourceClass );
 
 
+        public void addResource( ConsList<String> urlFragmentTemplates, Class<?> resourceClass ) {
+            if ( urlFragmentTemplates.isEmpty() ) {
+                // Store the resource on this node, if not already set
+                Validate.isNullState(rootResource, "rootResource", "A root resource has already been declared");
 
-        protected void createAndAppendChildNode(ConsList<String> urlFragmentTemplates, Class<?> resourceClass) {
+                rootResource = resourceClass;
+
+                return;
+            }
+
+            // create a child node and then carry on the search for where to set the resourceClass recursively
             String                 urlFragmentTemplate = urlFragmentTemplates.head();
             Nullable<RegistryTree> matchingChild       = findFirstMatchingChildFor(urlFragmentTemplate);
 
             if ( matchingChild.isNull() ) {
                 RegistryTree newChild = createNodeFor( urlFragmentTemplate );
 
-                children.cons(newChild);
+                this.children = children.cons(newChild);
+
+                newChild.addResource( urlFragmentTemplates.tail(), resourceClass );
             } else {
-                matchingChild.getValue().addResource( urlFragmentTemplates.tail(), resourceClass );
+                matchingChild.getValue().addResource(urlFragmentTemplates.tail(), resourceClass);
             }
         }
+
+
 
         private Nullable<RegistryTree> findFirstMatchingChildFor(final String urlFragmentTemplate) {
             return children.fetchFirstMatch(new Function1<Boolean, RegistryTree>() {
@@ -104,29 +163,11 @@ public class ResourceHandlerRegistry {
 
     private static class RootNode extends RegistryTree {
 
-        private Class rootResource;
-
-
-        public Nullable<DecodedResourceCall> decode( final ConsList<String> urlFragments ) {
-            return selectAndDecodeFirstMatchingChild(urlFragments);
-        }
-
-        public RegistryTree addResource( ConsList<String> urlFragmentTemplates, Class<?> resourceClass ) {
-            if ( urlFragmentTemplates.isEmpty() ) {
-                Validate.isNullState(rootResource, "rootResource", "A root resource has already been declared");
-
-                rootResource = resourceClass;
-            } else {
-                createAndAppendChildNode( urlFragmentTemplates, resourceClass );
-            }
-
-            return this;
-        }
-
         public boolean matches( String urlFragment ) {
             throw new UnsupportedOperationException("the RootNode cannot match a url fragment");
         }
 
+        protected void decorateResourceCallResult( DecodedResourceCall result, String urlFragment ) {}
     }
 
     private static class MatchStaticTextNode extends RegistryTree {
@@ -138,29 +179,12 @@ public class ResourceHandlerRegistry {
             this.targetText = targetText;
         }
 
-        public Nullable<DecodedResourceCall> decode( final ConsList<String> urlFragments ) {
-            if ( urlFragments.isEmpty() || !targetText.equals(urlFragments.head()) ) {
-                return Nullable.NULL;
-            }
-
-            return selectAndDecodeFirstMatchingChild(urlFragments.tail());
-        }
-
-        public RegistryTree addResource( ConsList<String> urlFragmentTemplates, Class<?> resourceClass ) {
-            if ( urlFragmentTemplates.isEmpty() ) {
-//                Validate.isNullState(rootResource, "rootResource", "A root resource has already been declared");
-// TODO here
-//                rootResource = resourceClass;
-            } else {
-                createAndAppendChildNode( urlFragmentTemplates, resourceClass );
-            }
-
-            return this;
-        }
 
         public boolean matches( String urlFragment ) {
             return targetText.equals(urlFragment);
         }
+
+        protected void decorateResourceCallResult( DecodedResourceCall result, String urlFragment ) {}
 
     }
 
@@ -168,42 +192,18 @@ public class ResourceHandlerRegistry {
 
         private String key;
 
-        public Nullable<DecodedResourceCall> decode( final ConsList<String> urlFragments ) {
-            return selectAndDecodeFirstMatchingChild(urlFragments.tail()).mapValue(new Function1<DecodedResourceCall, DecodedResourceCall>() {
-                public DecodedResourceCall invoke(DecodedResourceCall result) {
-                    result.appendParameter(key, urlFragments.head());
-
-                    return result;
-                }
-            });
+        public ExtractParameterNode( String paramName ) {
+            this.key = paramName;
         }
 
-        public RegistryTree addResource( ConsList<String> urlFragments, Class<?> resourceClass ) {
-            return null;
-        }
 
         public boolean matches( String urlFragment ) {
             return true;
         }
 
-    }
-
-    private static class ResourceMatchedNode extends RegistryTree {
-
-        private Class resourceHandler;
-
-        public Nullable<DecodedResourceCall> decode( final ConsList<String> urlFragments ) {
-            return Nullable.createNullable(new DecodedResourceCall(resourceHandler));
+        protected void decorateResourceCallResult( DecodedResourceCall result, String urlFragment ) {
+            result.appendParameter( key, urlFragment );
         }
-
-        public RegistryTree addResource( ConsList<String> urlFragments, Class<?> resourceClass ) {
-            return null;
-        }
-
-        public boolean matches( String urlFragment ) {
-            return false;
-        }
-
     }
 
 }

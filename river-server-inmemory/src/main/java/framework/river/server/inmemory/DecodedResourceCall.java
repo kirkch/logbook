@@ -17,18 +17,19 @@ public class DecodedResourceCall extends Lockable<DecodedResourceCall> {
 
     private String             relativeURL;
     private Class              resourceHandler;
-    private Map<String,String> parameters;
+    private Map<String,Object> parameters;
 
 
     public DecodedResourceCall( Class resourceHandler ) {
         this.resourceHandler = resourceHandler;
+        this.parameters      = new HashMap();
     }
 
     public DecodedResourceCall( String relativeURL, Class resourceHandler ) {
         this( relativeURL, resourceHandler, new HashMap() );
     }
 
-    public DecodedResourceCall(String relativeURL, Class resourceHandler, Map<String,String> parameters) {
+    public DecodedResourceCall(String relativeURL, Class resourceHandler, Map<String,Object> parameters) {
         this.relativeURL     = relativeURL;
         this.resourceHandler = resourceHandler;
         this.parameters      = parameters;
@@ -43,7 +44,7 @@ public class DecodedResourceCall extends Lockable<DecodedResourceCall> {
         return resourceHandler;
     }
 
-    public Map<String,String> getParameters() {
+    public Map<String,Object> getParameters() {
         return parameters;
     }
 
@@ -60,7 +61,7 @@ public class DecodedResourceCall extends Lockable<DecodedResourceCall> {
         this.resourceHandler = resourceHandler;
     }
 
-    public void setParameters(Map<String, String> parameters) {
+    public void setParameters(Map<String, Object> parameters) {
         throwIfLocked();
 
         this.parameters = parameters;
