@@ -26,7 +26,7 @@
         </dependency>
         <dependency>
             <groupId>com.mosaic</groupId>
-            <artifactId>lang-sandbox</artifactId>
+            <artifactId>collections-sandbox</artifactId>
         </dependency>
     </dependencies>
 </project>

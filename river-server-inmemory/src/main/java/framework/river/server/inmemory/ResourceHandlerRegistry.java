@@ -22,11 +22,18 @@ public class ResourceHandlerRegistry {
         registry.addResource( urlFragments, resourceClass );
     }
 
-    public void addAlias( String sourceEncodedURLRef, String destinationEncodedUrlRef ) {
+//    public void addAlias( String sourceEncodedURLRef, String destinationEncodedUrlRef ) {
+//
+//    }
 
-    }
-
-    public Nullable<DecodedResourceCall> decodeURL( final String relativeURL ) {
+    /**
+     * Locate a resource handler for the specified url.  Parameters will also be
+     * extracted out of the url and decoded if appropriate with errors being
+     * reported by the result.
+     *
+     * @param relativeURL after it has been url decoded eg '/users/chris kirk'
+     */
+    public Nullable<DecodedResourceCall> matchURL( final String relativeURL ) {
         ConsList<String> urlFragments = splitURL( relativeURL );
 
         Nullable<DecodedResourceCall> resultNbl = registry.matchURL(urlFragments);
@@ -59,11 +66,13 @@ public class ResourceHandlerRegistry {
 
     private static RegistryTree createNodeFor( String urlFragmentTemplate ) {
 // todo
-        if ( urlFragmentTemplate.startsWith("$") ) {
-            // todo ${}
-            // todo ${:}
-            // todo blank names
+        // todo ${}
+        // todo ${:}
+        // todo blank names
 
+        if ( urlFragmentTemplate.startsWith("${") && urlFragmentTemplate.endsWith("}")) {
+            return new ExtractParameterNode( urlFragmentTemplate.substring(2,urlFragmentTemplate.length()-1) );
+        } else if ( urlFragmentTemplate.startsWith("$") ) {
             return new ExtractParameterNode( urlFragmentTemplate.substring(1) );
         } else {
             return new MatchStaticTextNode( urlFragmentTemplate );
@@ -75,13 +84,13 @@ public class ResourceHandlerRegistry {
 
     private static abstract class RegistryTree {
 
-        private Class                  rootResource;
+        private Class resourceHandler;
         private ConsList<RegistryTree> children     = ConsList.Nil;
 
 
         public Nullable<DecodedResourceCall> matchURL( final ConsList<String> urlFragments ) {
             if ( urlFragments.isEmpty() ) {
-                return rootResource == null ? Nullable.NULL : Nullable.createNullable(new DecodedResourceCall(rootResource));
+                return resourceHandler == null ? Nullable.NULL : Nullable.createNullable(new DecodedResourceCall(resourceHandler));
             }
 
             return depthFirstRecursiveScanForFirstUrlMatch(urlFragments);
@@ -91,7 +100,7 @@ public class ResourceHandlerRegistry {
         private Nullable<DecodedResourceCall> depthFirstRecursiveScanForFirstUrlMatch(final ConsList<String> urlFragments) {
             final String head = urlFragments.head();   // NB already asserted from matchURL as being safe
 
-            return children.mapSingleValue(
+            return children.reverse().mapSingleValue(    // todo optimisation; don't call reverse each time.. we do it so that 'match' first semantics match the order that resources were added
                     new Function1<Nullable<DecodedResourceCall>, RegistryTree>() {
                         public Nullable<DecodedResourceCall> invoke( final RegistryTree child ) {
                             if ( !child.matches(head) ) {
@@ -125,9 +134,9 @@ public class ResourceHandlerRegistry {
         public void addResource( ConsList<String> urlFragmentTemplates, Class<?> resourceClass ) {
             if ( urlFragmentTemplates.isEmpty() ) {
                 // Store the resource on this node, if not already set
-                Validate.isNullState(rootResource, "rootResource", "A root resource has already been declared");
+                Validate.isNullState(resourceHandler, "resourceHandler", "A resource handler has already been declared");
 
-                rootResource = resourceClass;
+                resourceHandler = resourceClass;
 
                 return;
             }
@@ -204,6 +213,7 @@ public class ResourceHandlerRegistry {
         protected void decorateResourceCallResult( DecodedResourceCall result, String urlFragment ) {
             result.appendParameter( key, urlFragment );
         }
+
     }
 
 }

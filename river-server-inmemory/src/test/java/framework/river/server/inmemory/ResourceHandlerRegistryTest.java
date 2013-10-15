@@ -2,6 +2,7 @@ package framework.river.server.inmemory;
 
 import com.mosaic.lang.Nullable;
 import com.mosaic.utils.MapUtils;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Map;
@@ -18,7 +19,7 @@ public class ResourceHandlerRegistryTest {
 
     @Test
     public void givenNoMappings_decodeURL_expectNull() {
-        assertEquals( Nullable.NULL, registry.decodeURL("/users/abc") );
+        assertEquals( Nullable.NULL, registry.matchURL("/users/abc") );
     }
 
     @Test
@@ -26,7 +27,7 @@ public class ResourceHandlerRegistryTest {
         registry.addResource( "/users/abc", UserResource.class );
 
 
-        assertEquals( Nullable.NULL, registry.decodeURL("/users/foo") );
+        assertEquals( Nullable.NULL, registry.matchURL("/users/foo") );
     }
 
     @Test
@@ -36,7 +37,7 @@ public class ResourceHandlerRegistryTest {
 
         DecodedResourceCall expectedResult = new DecodedResourceCall("/users/abc", UserResource.class);
 
-        assertEquals( expectedResult, registry.decodeURL("/users/abc").getValue() );
+        assertEquals( expectedResult, registry.matchURL("/users/abc").getValue() );
     }
 
     @Test
@@ -47,7 +48,7 @@ public class ResourceHandlerRegistryTest {
 
         DecodedResourceCall expectedResult = new DecodedResourceCall("/users", UsersResource.class);
 
-        assertEquals( expectedResult, registry.decodeURL("/users").getValue() );
+        assertEquals( expectedResult, registry.matchURL("/users").getValue() );
     }
 
     @Test
@@ -58,7 +59,7 @@ public class ResourceHandlerRegistryTest {
 
         DecodedResourceCall expectedResult = new DecodedResourceCall("/users/abc", UserResource.class);
 
-        assertEquals( expectedResult, registry.decodeURL("/users/abc").getValue() );
+        assertEquals( expectedResult, registry.matchURL("/users/abc").getValue() );
     }
 
     @Test
@@ -69,7 +70,7 @@ public class ResourceHandlerRegistryTest {
 
         DecodedResourceCall expectedResult = new DecodedResourceCall("/users/abc", UserResource.class);
 
-        assertEquals( expectedResult, registry.decodeURL("/users/abc").getValue() );
+        assertEquals( expectedResult, registry.matchURL("/users/abc").getValue() );
     }
 
     @Test
@@ -80,7 +81,7 @@ public class ResourceHandlerRegistryTest {
 
         DecodedResourceCall expectedResult = new DecodedResourceCall("/users/", UsersResource.class);
 
-        assertEquals( expectedResult, registry.decodeURL("/users/").getValue() );
+        assertEquals( expectedResult, registry.matchURL("/users/").getValue() );
     }
 
     @Test
@@ -91,7 +92,7 @@ public class ResourceHandlerRegistryTest {
 
         DecodedResourceCall expectedResult = new DecodedResourceCall("/users/abc/", UserResource.class);
 
-        assertEquals( expectedResult, registry.decodeURL("/users/abc/").getValue() );
+        assertEquals( expectedResult, registry.matchURL("/users/abc/").getValue() );
     }
 
     @Test
@@ -102,11 +103,77 @@ public class ResourceHandlerRegistryTest {
         Map<String,Object> expectedParams = MapUtils.asMap("user_id", "abc");
         DecodedResourceCall expectedResult = new DecodedResourceCall("/users/abc/", UserResource.class, expectedParams);
 
-        assertEquals( expectedResult, registry.decodeURL("/users/abc/").getValue() );
+        assertEquals( expectedResult, registry.matchURL("/users/abc/").getValue() );
     }
 
-    // with params
+    @Test
+    public void givenURLWithCurlyBracedParam_decodeMatchingParam_expectParamToBeSuppliedInResult() {
+        registry.addResource( "/users/${user_id}", UserResource.class );
 
-    // givenMapping_decodeURLWithEscapedCharactersThatDoesMatch_expectDecodeToUnescapeCharacters
+
+        Map<String,Object> expectedParams = MapUtils.asMap("user_id", "abc");
+        DecodedResourceCall expectedResult = new DecodedResourceCall("/users/abc/", UserResource.class, expectedParams);
+
+        assertEquals( expectedResult, registry.matchURL("/users/abc/").getValue() );
+    }
+
+    @Test
+    public void givenURLWithParams_decodeMatchingParam_expectParamToBeSuppliedInResult() {
+        registry.addResource( "/users/${user_id}/audit/$audit_id", UserResource.class );
+
+
+        Map<String,Object> expectedParams = MapUtils.asMap("user_id", "abc", "audit_id", "012");
+        DecodedResourceCall expectedResult = new DecodedResourceCall("/users/abc/audit/012", UserResource.class, expectedParams);
+
+        assertEquals( expectedResult, registry.matchURL("/users/abc/audit/012").getValue() );
+    }
+
+    @Test
+    public void givenTwoUrlsWithParamsMostLongestDeclaredFirst_decodeShorterURL_expectMatch() {
+        registry.addResource( "/users/${user_id}/audit/$audit_id", AuditResource.class );
+        registry.addResource( "/users/${user_id}", UserResource.class );
+
+
+        Map<String,Object> expectedParams = MapUtils.asMap("user_id", "abc");
+        DecodedResourceCall expectedResult = new DecodedResourceCall("/users/abc/", UserResource.class, expectedParams);
+
+        assertEquals( expectedResult, registry.matchURL("/users/abc/").getValue() );
+    }
+
+    @Test
+    public void givenTwoUrlsWithParamsMostShortestDeclaredFirst_decodeShorterURL_expectMatch() {
+        registry.addResource( "/users/${user_id}", UserResource.class );
+        registry.addResource( "/users/${user_id}/audit/$audit_id", AuditResource.class );
+
+
+        Map<String,Object> expectedParams = MapUtils.asMap("user_id", "abc");
+        DecodedResourceCall expectedResult = new DecodedResourceCall("/users/abc/", UserResource.class, expectedParams);
+
+        assertEquals( expectedResult, registry.matchURL("/users/abc/").getValue() );
+    }
+
+    @Test
+    public void givenTwoClashingURLs_expect() {
+        registry.addResource( "/users/${user_id}", UserResource.class );
+
+
+        try {
+            registry.addResource("/users/list", UsersResource.class);
+            Assert.fail("expected IllegalStateException");
+        } catch (IllegalStateException e) {
+            Assert.assertEquals("'resourceHandler' must be null but was class framework.river.server.inmemory.UserResource: 'A resource handler has already been declared'", e.getMessage());
+        }
+    }
+
+    @Test
+    public void givenTwoClashingURLs_expect2() {
+        registry.addResource( "/users/list", UsersResource.class );
+        registry.addResource( "/users/${user_id}", UserResource.class );
+
+
+        DecodedResourceCall expectedResult = new DecodedResourceCall("/users/list/", UsersResource.class);
+
+        assertEquals( expectedResult, registry.matchURL("/users/list/").getValue() );
+    }
 
 }
