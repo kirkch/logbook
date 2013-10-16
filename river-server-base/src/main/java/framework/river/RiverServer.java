@@ -1,7 +1,8 @@
 package framework.river;
 
-import com.mosaic.lang.Future;
-import com.mosaic.lang.Nullable;
+
+import com.mosaic.lang.functional.Future;
+import com.mosaic.lang.functional.Nullable;
 
 /**
  * The CyGrid Server.  Different implementations will offer different non-functional

@@ -1,8 +1,8 @@
 package framework.river;
 
+import com.mosaic.lang.functional.Nullable;
 import com.mosaic.lang.time.DTM;
 import framework.river.http.HttpMethodEnum;
-import com.mosaic.lang.Nullable;
 
 import java.util.Collections;
 import java.util.Map;

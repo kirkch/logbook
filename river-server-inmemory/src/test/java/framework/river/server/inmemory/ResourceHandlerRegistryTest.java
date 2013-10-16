@@ -1,6 +1,7 @@
 package framework.river.server.inmemory;
 
-import com.mosaic.lang.Nullable;
+
+import com.mosaic.lang.functional.Nullable;
 import com.mosaic.utils.MapUtils;
 import org.junit.Assert;
 import org.junit.Test;

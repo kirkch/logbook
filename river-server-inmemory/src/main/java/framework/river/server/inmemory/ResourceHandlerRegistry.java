@@ -2,8 +2,8 @@ package framework.river.server.inmemory;
 
 import com.mosaic.collections.ConsList;
 import com.mosaic.lang.Validate;
-import com.mosaic.lang.function.Function1;
-import com.mosaic.lang.Nullable;
+import com.mosaic.lang.functional.Function1;
+import com.mosaic.lang.functional.Nullable;
 
 
 /**
@@ -25,6 +25,15 @@ public class ResourceHandlerRegistry {
 //    public void addAlias( String sourceEncodedURLRef, String destinationEncodedUrlRef ) {
 //
 //    }
+
+
+    // Future   -- value or exception or failure (in the future)
+    // Nullable -- value or null
+
+    // Try      -- value or exception or failure
+
+    // FutureNbl
+    // TryNbl
 
     /**
      * Locate a resource handler for the specified url.  Parameters will also be
@@ -177,6 +186,7 @@ public class ResourceHandlerRegistry {
         }
 
         protected void decorateResourceCallResult( DecodedResourceCall result, String urlFragment ) {}
+
     }
 
     private static class MatchStaticTextNode extends RegistryTree {

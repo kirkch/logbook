@@ -1,8 +1,8 @@
 package framework.river;
 
 import com.mosaic.lang.Validate;
+import com.mosaic.lang.functional.Nullable;
 import com.mosaic.lang.time.DTM;
-import com.mosaic.lang.Nullable;
 
 /**
  *
