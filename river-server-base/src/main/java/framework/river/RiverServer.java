@@ -1,6 +1,6 @@
 package framework.river;
 
-import framework.river.lang.Future;
+import com.mosaic.lang.Future;
 import com.mosaic.lang.Nullable;
 
 /**

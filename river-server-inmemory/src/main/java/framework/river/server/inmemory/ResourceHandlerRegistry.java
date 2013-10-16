@@ -101,7 +101,7 @@ public class ResourceHandlerRegistry {
             final String head = urlFragments.head();   // NB already asserted from matchURL as being safe
 
             return children.reverse().mapSingleValue(    // todo optimisation; don't call reverse each time.. we do it so that 'match' first semantics match the order that resources were added
-                    new Function1<Nullable<DecodedResourceCall>, RegistryTree>() {
+                    new Function1<RegistryTree,Nullable<DecodedResourceCall>>() {
                         public Nullable<DecodedResourceCall> invoke( final RegistryTree child ) {
                             if ( !child.matches(head) ) {
                                 return Nullable.NULL;
@@ -159,7 +159,7 @@ public class ResourceHandlerRegistry {
 
 
         private Nullable<RegistryTree> findFirstMatchingChildFor(final String urlFragmentTemplate) {
-            return children.fetchFirstMatch(new Function1<Boolean, RegistryTree>() {
+            return children.fetchFirstMatch(new Function1<RegistryTree,Boolean>() {
                 public Boolean invoke(RegistryTree child) {
                     return child.matches(urlFragmentTemplate);
                 }
