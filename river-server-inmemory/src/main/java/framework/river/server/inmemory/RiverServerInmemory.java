@@ -1,7 +1,8 @@
 package framework.river.server.inmemory;
 
-import com.mosaic.lang.functional.Future;
+
 import com.mosaic.lang.functional.Nullable;
+import com.mosaic.utils.concurrent.Future;
 import framework.river.RiverRequest;
 import framework.river.RiverResponse;
 import framework.river.RiverServer;
