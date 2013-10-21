@@ -42,6 +42,9 @@ public class ResourceHandlerRegistry {
      *
      * @param relativeURL after it has been url decoded eg '/users/chris kirk'
      */
+//    public Try<Nullable<DecodedResourceCall>> matchURL( final String relativeURL ) {
+//    public TryNbl<DecodedResourceCall> matchURL( final String relativeURL ) {
+
     public Nullable<DecodedResourceCall> matchURL( final String relativeURL ) {
         ConsList<String> urlFragments = splitURL( relativeURL );
 
