@@ -6,6 +6,10 @@ import com.mosaic.lang.functional.Function1;
 import com.mosaic.lang.functional.Nullable;
 import com.mosaic.lang.functional.TryNbl;
 import com.mosaic.lang.functional.TryNow;
+import com.mosaic.utils.ListUtils;
+
+import java.util.ArrayList;
+import java.util.List;
 
 
 /**
@@ -101,8 +105,7 @@ public class ResourceHandlerRegistry {
     private static abstract class RegistryTree {
 
         private TryNbl<DecodedResourceCall> resourceHandler  = TryNow.NULL;
-        private ConsList<RegistryTree>      children         = ConsList.Nil;
-        private ConsList<RegistryTree>      reversedChildren = null;   /// todo replace with data structure that can be walked from either direction
+        private List<RegistryTree>          children         = new ArrayList();
 
 
         public TryNbl<DecodedResourceCall> matchURL( final ConsList<String> urlFragments ) {
@@ -125,11 +128,8 @@ public class ResourceHandlerRegistry {
         private TryNbl<DecodedResourceCall> depthFirstRecursiveScanForFirstUrlMatch( final ConsList<String> urlFragments ) {
             String head = urlFragments.head();
 
-            if ( reversedChildren == null ) {
-                reversedChildren = children.reverse();
-            }
-
-            Nullable<DecodedResourceCall> matchedNodeNbl = reversedChildren.mapSingleValue(
+            Nullable<DecodedResourceCall> matchedNodeNbl = ListUtils.matchAndMapFirstResult(
+                    children,
                     recursiveMatchWhichDecoratesResultAsStackUnwinds(urlFragments, head)
             );
 
@@ -186,8 +186,7 @@ public class ResourceHandlerRegistry {
             if ( matchingChild.isNull() ) {
                 RegistryTree newChild = createNodeFor( urlFragmentTemplate );
 
-                this.children         = children.cons(newChild);
-                this.reversedChildren = null;
+                children.add(newChild);
 
                 newChild.addResource( urlFragmentTemplates.tail(), resourceClass );
             } else {
@@ -198,11 +197,14 @@ public class ResourceHandlerRegistry {
 
 
         private Nullable<RegistryTree> findFirstMatchingChildFor(final String urlFragmentTemplate) {
-            return children.fetchFirstMatch(new Function1<RegistryTree,Boolean>() {
-                public Boolean invoke(RegistryTree child) {
-                    return child.matches(urlFragmentTemplate);
-                }
-            });
+            return ListUtils.firstMatch(
+                    children,
+                    new Function1<RegistryTree,Boolean>() {
+                        public Boolean invoke(RegistryTree child) {
+                            return child.matches(urlFragmentTemplate);
+                        }
+                    }
+            );
         }
 
     }
