@@ -2,6 +2,7 @@ package framework.river.server.inmemory;
 
 
 import com.mosaic.lang.functional.Nullable;
+import com.mosaic.lang.functional.TryNbl;
 import com.mosaic.utils.MapUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -38,7 +39,9 @@ public class ResourceHandlerRegistryTest {
 
         DecodedResourceCall expectedResult = new DecodedResourceCall("/users/abc", UserResource.class);
 
-        assertEquals( expectedResult, registry.matchURL("/users/abc").getResultNoBlock().getValue() );
+        TryNbl<DecodedResourceCall> decodedResourceCallTryNbl = registry.matchURL("/users/abc");
+        Nullable<DecodedResourceCall> resultNoBlock = decodedResourceCallTryNbl.getResultNoBlock();
+        assertEquals(expectedResult, resultNoBlock.getValue());
     }
 
     @Test
@@ -162,7 +165,7 @@ public class ResourceHandlerRegistryTest {
             registry.addResource("/users/list", UsersResource.class);
             Assert.fail("expected IllegalStateException");
         } catch (IllegalStateException e) {
-            Assert.assertEquals("'resourceHandler' must be null but was class framework.river.server.inmemory.UserResource: 'A resource handler has already been declared'", e.getMessage());
+            Assert.assertEquals("'resourceHandler' must be null but was framework.river.server.inmemory.UserResource: 'A resource handler has already been declared'", e.getMessage());
         }
     }
 

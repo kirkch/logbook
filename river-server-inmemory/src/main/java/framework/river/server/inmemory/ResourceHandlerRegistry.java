@@ -44,17 +44,16 @@ public class ResourceHandlerRegistry {
      *
      * @param relativeURL after it has been url decoded eg '/users/chris kirk'
      */
-//    public Try<Nullable<DecodedResourceCall>> matchURL( final String relativeURL ) {
-//    public TryNbl<DecodedResourceCall> matchURL( final String relativeURL ) {
-
     public TryNbl<DecodedResourceCall> matchURL( final String relativeURL ) {
         ConsList<String> urlFragments = splitURL( relativeURL );
+
 
         TryNbl<DecodedResourceCall> resultNbl = registry.matchURL(urlFragments);
 
         return resultNbl.mapResult( new Function1<DecodedResourceCall, DecodedResourceCall>() {
             public DecodedResourceCall invoke( DecodedResourceCall v ) {
                 v.setRelativeURL(relativeURL);
+                v.lock();
 
                 return v;
             }
@@ -98,16 +97,24 @@ public class ResourceHandlerRegistry {
 
     private static abstract class RegistryTree {
 
-        private Class resourceHandler;
-        private ConsList<RegistryTree> children     = ConsList.Nil;
+        private TryNbl<DecodedResourceCall> resourceHandler = TryNow.NULL;
+        private ConsList<RegistryTree>      children        = ConsList.Nil;
 
 
         public TryNbl<DecodedResourceCall> matchURL( final ConsList<String> urlFragments ) {
             if ( urlFragments.isEmpty() ) {
-                return resourceHandler == null ? TryNow.NULL : TryNow.successfulNbl(new DecodedResourceCall(resourceHandler));
+                return createDecodedResourceCall();
             }
 
             return depthFirstRecursiveScanForFirstUrlMatch(urlFragments);
+        }
+
+        private TryNbl<DecodedResourceCall> createDecodedResourceCall() {
+            return resourceHandler.mapResult(new Function1<DecodedResourceCall, DecodedResourceCall>() {
+                public DecodedResourceCall invoke(DecodedResourceCall decodedResourceCall) {
+                    return decodedResourceCall.copy();
+                }
+            });
         }
 
 
@@ -151,9 +158,11 @@ public class ResourceHandlerRegistry {
         public void addResource( ConsList<String> urlFragmentTemplates, Class<?> resourceClass ) {
             if ( urlFragmentTemplates.isEmpty() ) {
                 // Store the resource on this node, if not already set
-                Validate.isNullState(resourceHandler, "resourceHandler", "A resource handler has already been declared");
+                if ( !resourceHandler.isNull() ) {
+                    throw new IllegalStateException( "'resourceHandler' must be null but was " + resourceHandler.getResultNoBlock().getValueNbl().getResourceHandler().getName() + ": 'A resource handler has already been declared'" );
+                }
 
-                resourceHandler = resourceClass;
+                resourceHandler = TryNow.successfulNbl( new DecodedResourceCall(resourceClass).lock() );
 
                 return;
             }
