@@ -4,6 +4,8 @@ import com.mosaic.collections.ConsList;
 import com.mosaic.lang.Validate;
 import com.mosaic.lang.functional.Function1;
 import com.mosaic.lang.functional.Nullable;
+import com.mosaic.lang.functional.TryNbl;
+import com.mosaic.lang.functional.TryNow;
 
 
 /**
@@ -45,12 +47,12 @@ public class ResourceHandlerRegistry {
 //    public Try<Nullable<DecodedResourceCall>> matchURL( final String relativeURL ) {
 //    public TryNbl<DecodedResourceCall> matchURL( final String relativeURL ) {
 
-    public Nullable<DecodedResourceCall> matchURL( final String relativeURL ) {
+    public TryNbl<DecodedResourceCall> matchURL( final String relativeURL ) {
         ConsList<String> urlFragments = splitURL( relativeURL );
 
-        Nullable<DecodedResourceCall> resultNbl = registry.matchURL(urlFragments);
+        TryNbl<DecodedResourceCall> resultNbl = registry.matchURL(urlFragments);
 
-        return resultNbl.mapValue( new Function1<DecodedResourceCall, DecodedResourceCall>() {
+        return resultNbl.mapResult( new Function1<DecodedResourceCall, DecodedResourceCall>() {
             public DecodedResourceCall invoke( DecodedResourceCall v ) {
                 v.setRelativeURL(relativeURL);
 
@@ -100,28 +102,30 @@ public class ResourceHandlerRegistry {
         private ConsList<RegistryTree> children     = ConsList.Nil;
 
 
-        public Nullable<DecodedResourceCall> matchURL( final ConsList<String> urlFragments ) {
+        public TryNbl<DecodedResourceCall> matchURL( final ConsList<String> urlFragments ) {
             if ( urlFragments.isEmpty() ) {
-                return resourceHandler == null ? Nullable.NULL : Nullable.createNullable(new DecodedResourceCall(resourceHandler));
+                return resourceHandler == null ? TryNow.NULL : TryNow.successfulNbl(new DecodedResourceCall(resourceHandler));
             }
 
             return depthFirstRecursiveScanForFirstUrlMatch(urlFragments);
         }
 
 
-        private Nullable<DecodedResourceCall> depthFirstRecursiveScanForFirstUrlMatch(final ConsList<String> urlFragments) {
+        private TryNbl<DecodedResourceCall> depthFirstRecursiveScanForFirstUrlMatch(final ConsList<String> urlFragments) {
             final String head = urlFragments.head();   // NB already asserted from matchURL as being safe
 
-            return children.reverse().mapSingleValue(    // todo optimisation; don't call reverse each time.. we do it so that 'match' first semantics match the order that resources were added
+            // todo clean up
+            return TryNow.successfulNbl(
+                    children.reverse().mapSingleValue(    // todo optimisation; don't call reverse each time.. we do it so that 'match' first semantics match the order that resources were added
                     new Function1<RegistryTree,Nullable<DecodedResourceCall>>() {
                         public Nullable<DecodedResourceCall> invoke( final RegistryTree child ) {
                             if ( !child.matches(head) ) {
                                 return Nullable.NULL;
                             }
 
-                            Nullable<DecodedResourceCall> decodedResourceCallNbl = child.matchURL(urlFragments.tail());
+                            TryNbl<DecodedResourceCall> decodedResourceCallNbl = child.matchURL(urlFragments.tail());
 
-                            return decodedResourceCallNbl.mapValue(
+                            return decodedResourceCallNbl.mapResult(
                                     new Function1<DecodedResourceCall,DecodedResourceCall>() {
                                         public DecodedResourceCall invoke( DecodedResourceCall v ) {
                                             child.decorateResourceCallResult( v, head );
@@ -129,9 +133,10 @@ public class ResourceHandlerRegistry {
                                             return v;
                                         }
                                     }
-                            );
+                            ).getResultNoBlock();
                         }
                     }
+                    )
             );
         }
 

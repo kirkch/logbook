@@ -20,7 +20,7 @@ public class ResourceHandlerRegistryTest {
 
     @Test
     public void givenNoMappings_decodeURL_expectNull() {
-        assertEquals( Nullable.NULL, registry.matchURL("/users/abc") );
+        assertEquals( Nullable.NULL, registry.matchURL("/users/abc").getResultNoBlock() );
     }
 
     @Test
@@ -28,7 +28,7 @@ public class ResourceHandlerRegistryTest {
         registry.addResource( "/users/abc", UserResource.class );
 
 
-        assertEquals( Nullable.NULL, registry.matchURL("/users/foo") );
+        assertEquals( Nullable.NULL, registry.matchURL("/users/foo").getResultNoBlock() );
     }
 
     @Test
@@ -38,7 +38,7 @@ public class ResourceHandlerRegistryTest {
 
         DecodedResourceCall expectedResult = new DecodedResourceCall("/users/abc", UserResource.class);
 
-        assertEquals( expectedResult, registry.matchURL("/users/abc").getValue() );
+        assertEquals( expectedResult, registry.matchURL("/users/abc").getResultNoBlock().getValue() );
     }
 
     @Test
@@ -49,7 +49,7 @@ public class ResourceHandlerRegistryTest {
 
         DecodedResourceCall expectedResult = new DecodedResourceCall("/users", UsersResource.class);
 
-        assertEquals( expectedResult, registry.matchURL("/users").getValue() );
+        assertEquals( expectedResult, registry.matchURL("/users").getResultNoBlock().getValue() );
     }
 
     @Test
@@ -60,7 +60,7 @@ public class ResourceHandlerRegistryTest {
 
         DecodedResourceCall expectedResult = new DecodedResourceCall("/users/abc", UserResource.class);
 
-        assertEquals( expectedResult, registry.matchURL("/users/abc").getValue() );
+        assertEquals( expectedResult, registry.matchURL("/users/abc").getResultNoBlock().getValue() );
     }
 
     @Test
@@ -71,7 +71,7 @@ public class ResourceHandlerRegistryTest {
 
         DecodedResourceCall expectedResult = new DecodedResourceCall("/users/abc", UserResource.class);
 
-        assertEquals( expectedResult, registry.matchURL("/users/abc").getValue() );
+        assertEquals( expectedResult, registry.matchURL("/users/abc").getResultNoBlock().getValue() );
     }
 
     @Test
@@ -82,7 +82,7 @@ public class ResourceHandlerRegistryTest {
 
         DecodedResourceCall expectedResult = new DecodedResourceCall("/users/", UsersResource.class);
 
-        assertEquals( expectedResult, registry.matchURL("/users/").getValue() );
+        assertEquals( expectedResult, registry.matchURL("/users/").getResultNoBlock().getValue() );
     }
 
     @Test
@@ -93,7 +93,7 @@ public class ResourceHandlerRegistryTest {
 
         DecodedResourceCall expectedResult = new DecodedResourceCall("/users/abc/", UserResource.class);
 
-        assertEquals( expectedResult, registry.matchURL("/users/abc/").getValue() );
+        assertEquals( expectedResult, registry.matchURL("/users/abc/").getResultNoBlock().getValue() );
     }
 
     @Test
@@ -104,7 +104,7 @@ public class ResourceHandlerRegistryTest {
         Map<String,Object> expectedParams = MapUtils.asMap("user_id", "abc");
         DecodedResourceCall expectedResult = new DecodedResourceCall("/users/abc/", UserResource.class, expectedParams);
 
-        assertEquals( expectedResult, registry.matchURL("/users/abc/").getValue() );
+        assertEquals( expectedResult, registry.matchURL("/users/abc/").getResultNoBlock().getValue() );
     }
 
     @Test
@@ -115,7 +115,7 @@ public class ResourceHandlerRegistryTest {
         Map<String,Object> expectedParams = MapUtils.asMap("user_id", "abc");
         DecodedResourceCall expectedResult = new DecodedResourceCall("/users/abc/", UserResource.class, expectedParams);
 
-        assertEquals( expectedResult, registry.matchURL("/users/abc/").getValue() );
+        assertEquals( expectedResult, registry.matchURL("/users/abc/").getResultNoBlock().getValue() );
     }
 
     @Test
@@ -126,7 +126,7 @@ public class ResourceHandlerRegistryTest {
         Map<String,Object> expectedParams = MapUtils.asMap("user_id", "abc", "audit_id", "012");
         DecodedResourceCall expectedResult = new DecodedResourceCall("/users/abc/audit/012", UserResource.class, expectedParams);
 
-        assertEquals( expectedResult, registry.matchURL("/users/abc/audit/012").getValue() );
+        assertEquals( expectedResult, registry.matchURL("/users/abc/audit/012").getResultNoBlock().getValue() );
     }
 
     @Test
@@ -138,7 +138,7 @@ public class ResourceHandlerRegistryTest {
         Map<String,Object> expectedParams = MapUtils.asMap("user_id", "abc");
         DecodedResourceCall expectedResult = new DecodedResourceCall("/users/abc/", UserResource.class, expectedParams);
 
-        assertEquals( expectedResult, registry.matchURL("/users/abc/").getValue() );
+        assertEquals( expectedResult, registry.matchURL("/users/abc/").getResultNoBlock().getValue() );
     }
 
     @Test
@@ -150,7 +150,7 @@ public class ResourceHandlerRegistryTest {
         Map<String,Object> expectedParams = MapUtils.asMap("user_id", "abc");
         DecodedResourceCall expectedResult = new DecodedResourceCall("/users/abc/", UserResource.class, expectedParams);
 
-        assertEquals( expectedResult, registry.matchURL("/users/abc/").getValue() );
+        assertEquals( expectedResult, registry.matchURL("/users/abc/").getResultNoBlock().getValue() );
     }
 
     @Test
@@ -174,7 +174,7 @@ public class ResourceHandlerRegistryTest {
 
         DecodedResourceCall expectedResult = new DecodedResourceCall("/users/list/", UsersResource.class);
 
-        assertEquals( expectedResult, registry.matchURL("/users/list/").getValue() );
+        assertEquals( expectedResult, registry.matchURL("/users/list/").getResultNoBlock().getValue() );
     }
 
 }
