@@ -100,8 +100,9 @@ public class ResourceHandlerRegistry {
 
     private static abstract class RegistryTree {
 
-        private TryNbl<DecodedResourceCall> resourceHandler = TryNow.NULL;
-        private ConsList<RegistryTree>      children        = ConsList.Nil;
+        private TryNbl<DecodedResourceCall> resourceHandler  = TryNow.NULL;
+        private ConsList<RegistryTree>      children         = ConsList.Nil;
+        private ConsList<RegistryTree>      reversedChildren = null;   /// todo replace with data structure that can be walked from either direction
 
 
         public TryNbl<DecodedResourceCall> matchURL( final ConsList<String> urlFragments ) {
@@ -124,14 +125,18 @@ public class ResourceHandlerRegistry {
         private TryNbl<DecodedResourceCall> depthFirstRecursiveScanForFirstUrlMatch( final ConsList<String> urlFragments ) {
             String head = urlFragments.head();
 
-            Nullable<DecodedResourceCall> matchedNodeNbl = children.reverse().mapSingleValue(
-                    recursiveMatchWhichDecoratesResults(urlFragments, head)
+            if ( reversedChildren == null ) {
+                reversedChildren = children.reverse();
+            }
+
+            Nullable<DecodedResourceCall> matchedNodeNbl = reversedChildren.mapSingleValue(
+                    recursiveMatchWhichDecoratesResultAsStackUnwinds(urlFragments, head)
             );
 
             return TryNow.successfulNbl( matchedNodeNbl );
         }
 
-        private Function1<RegistryTree, Nullable<DecodedResourceCall>> recursiveMatchWhichDecoratesResults(final ConsList<String> urlFragments, final String head) {
+        private Function1<RegistryTree, Nullable<DecodedResourceCall>> recursiveMatchWhichDecoratesResultAsStackUnwinds(final ConsList<String> urlFragments, final String head) {
             return new Function1<RegistryTree,Nullable<DecodedResourceCall>>() {
                 public Nullable<DecodedResourceCall> invoke( final RegistryTree candidateNode ) {
                     if ( !candidateNode.matches(head) ) {
@@ -181,7 +186,8 @@ public class ResourceHandlerRegistry {
             if ( matchingChild.isNull() ) {
                 RegistryTree newChild = createNodeFor( urlFragmentTemplate );
 
-                this.children = children.cons(newChild);
+                this.children         = children.cons(newChild);
+                this.reversedChildren = null;
 
                 newChild.addResource( urlFragmentTemplates.tail(), resourceClass );
             } else {
