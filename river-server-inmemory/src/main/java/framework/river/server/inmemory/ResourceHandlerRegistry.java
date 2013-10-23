@@ -45,11 +45,14 @@ public class ResourceHandlerRegistry {
      * @param relativeURL after it has been url decoded eg '/users/chris kirk'
      */
     public TryNbl<DecodedResourceCall> matchURL( final String relativeURL ) {
-        ConsList<String> urlFragments = splitURL( relativeURL );
+        ConsList<String>            urlFragments = splitURL( relativeURL );
+        TryNbl<DecodedResourceCall> resultNbl    = registry.matchURL(urlFragments);
+
+        return finaliseResult( relativeURL, resultNbl );
+    }
 
 
-        TryNbl<DecodedResourceCall> resultNbl = registry.matchURL(urlFragments);
-
+    private TryNbl<DecodedResourceCall> finaliseResult(final String relativeURL, TryNbl<DecodedResourceCall> resultNbl) {
         return resultNbl.mapResult( new Function1<DecodedResourceCall, DecodedResourceCall>() {
             public DecodedResourceCall invoke( DecodedResourceCall v ) {
                 v.setRelativeURL(relativeURL);
@@ -103,13 +106,13 @@ public class ResourceHandlerRegistry {
 
         public TryNbl<DecodedResourceCall> matchURL( final ConsList<String> urlFragments ) {
             if ( urlFragments.isEmpty() ) {
-                return createDecodedResourceCall();
+                return createResult();
             }
 
-            return depthFirstRecursiveScanForFirstUrlMatch(urlFragments);
+            return depthFirstRecursiveScanForFirstUrlMatch( urlFragments );
         }
 
-        private TryNbl<DecodedResourceCall> createDecodedResourceCall() {
+        private TryNbl<DecodedResourceCall> createResult() {
             return resourceHandler.mapResult(new Function1<DecodedResourceCall, DecodedResourceCall>() {
                 public DecodedResourceCall invoke(DecodedResourceCall decodedResourceCall) {
                     return decodedResourceCall.copy();
@@ -118,33 +121,37 @@ public class ResourceHandlerRegistry {
         }
 
 
-        private TryNbl<DecodedResourceCall> depthFirstRecursiveScanForFirstUrlMatch(final ConsList<String> urlFragments) {
-            final String head = urlFragments.head();   // NB already asserted from matchURL as being safe
+        private TryNbl<DecodedResourceCall> depthFirstRecursiveScanForFirstUrlMatch( final ConsList<String> urlFragments ) {
+            String head = urlFragments.head();
 
-            // todo clean up
-            return TryNow.successfulNbl(
-                    children.reverse().mapSingleValue(    // todo optimisation; don't call reverse each time.. we do it so that 'match' first semantics match the order that resources were added
-                    new Function1<RegistryTree,Nullable<DecodedResourceCall>>() {
-                        public Nullable<DecodedResourceCall> invoke( final RegistryTree child ) {
-                            if ( !child.matches(head) ) {
-                                return Nullable.NULL;
-                            }
-
-                            TryNbl<DecodedResourceCall> decodedResourceCallNbl = child.matchURL(urlFragments.tail());
-
-                            return decodedResourceCallNbl.mapResult(
-                                    new Function1<DecodedResourceCall,DecodedResourceCall>() {
-                                        public DecodedResourceCall invoke( DecodedResourceCall v ) {
-                                            child.decorateResourceCallResult( v, head );
-
-                                            return v;
-                                        }
-                                    }
-                            ).getResultNoBlock();
-                        }
-                    }
-                    )
+            Nullable<DecodedResourceCall> matchedNodeNbl = children.reverse().mapSingleValue(
+                    recursiveMatchWhichDecoratesResults(urlFragments, head)
             );
+
+            return TryNow.successfulNbl( matchedNodeNbl );
+        }
+
+        private Function1<RegistryTree, Nullable<DecodedResourceCall>> recursiveMatchWhichDecoratesResults(final ConsList<String> urlFragments, final String head) {
+            return new Function1<RegistryTree,Nullable<DecodedResourceCall>>() {
+                public Nullable<DecodedResourceCall> invoke( final RegistryTree candidateNode ) {
+                    if ( !candidateNode.matches(head) ) {
+                        return Nullable.NULL;
+                    }
+
+
+                    TryNbl<DecodedResourceCall> decodedResourceCallNbl = candidateNode.matchURL(urlFragments.tail());
+
+                    return decodedResourceCallNbl.mapResult(
+                            new Function1<DecodedResourceCall,DecodedResourceCall>() {
+                                public DecodedResourceCall invoke( DecodedResourceCall v ) {
+                                    candidateNode.decorateResourceCallResult(v, head);
+
+                                    return v;
+                                }
+                            }
+                    ).getResultNoBlock();
+                }
+            };
         }
 
         /**
