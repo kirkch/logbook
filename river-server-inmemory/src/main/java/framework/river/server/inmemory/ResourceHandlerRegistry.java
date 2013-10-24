@@ -24,31 +24,46 @@ public class ResourceHandlerRegistry {
     private Map<String,StringCodec> codecs   = new HashMap();
 
     public ResourceHandlerRegistry() {
-        codecs.put( "int",    StandardStringCodecs.INTEGER_CODEC );
-        codecs.put( "long",   StandardStringCodecs.LONG_CODEC );
-        codecs.put( "float",  StandardStringCodecs.FLOAT_CODEC );
-        codecs.put( "double", StandardStringCodecs.DOUBLE_CODEC );
+        registerParameterCodec( "int",    StandardStringCodecs.INTEGER_CODEC );
+        registerParameterCodec( "long",   StandardStringCodecs.LONG_CODEC );
+        registerParameterCodec( "float",  StandardStringCodecs.FLOAT_CODEC );
+        registerParameterCodec( "double", StandardStringCodecs.DOUBLE_CODEC );
     }
 
 
+    /**
+     * Register the following REST resource hander with the specified URL.
+     * The URLs are relative URLs starting from the root of the container.
+     * Named parameters may be included in the URL using one of several
+     * formats:
+     *
+     * <table>
+     *     <tr><td>/users/index</td><td>Fixed url with no parameters</td></tr>
+     *     <tr><td>/users/$user_id</td><td>Will match both /users/u1 and /users/u2</td></tr>
+     *     <tr><td>/users/${user_id}</td><td>Will match both /users/u1 and /users/u2</td></tr>
+     *     <tr><td>/users/${user_id:long}</td><td>Will match /users/123 and fail with an error for /users/u1</td></tr>
+     * </table>
+     *
+     *
+     * @param encodedURLRef parameter encoded url
+     * @param resourceClass the class that will handle the PUT/POST/GET/etc requests
+     */
     public void addResource( String encodedURLRef, Class<?> resourceClass ) {
         ConsList<String> urlFragments = splitURL( encodedURLRef );
 
         registry.addResource( urlFragments, resourceClass, codecs );
     }
 
-//    public void addAlias( String sourceEncodedURLRef, String destinationEncodedUrlRef ) {
-//
-//    }
+    /**
+     * Add support for a new type.  Parameters within a URL can be marked
+     * as having a type with the following format ${paramName:typeName}.  When
+     * the url is matched and the param is extracted out it will be decoded
+     * by the codec for the registered typeName.  Any errors will be reported.
+     */
+    public void registerParameterCodec( String typeName, StringCodec codec ) {
+        codecs.put( typeName, codec );
+    }
 
-
-    // Future   -- value or exception or failure (in the future)
-    // Nullable -- value or null
-
-    // Try      -- value or exception or failure
-
-    // FutureNbl
-    // TryNbl
 
     /**
      * Locate a resource handler for the specified url.  Parameters will also be
@@ -63,6 +78,9 @@ public class ResourceHandlerRegistry {
 
         return finaliseResult( relativeURL, resultNbl );
     }
+
+
+
 
 
     private TryNbl<DecodedResourceCall> finaliseResult(final String relativeURL, TryNbl<DecodedResourceCall> resultNbl) {
