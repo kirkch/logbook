@@ -1,6 +1,7 @@
 package framework.river.server.inmemory;
 
 
+import com.mosaic.collections.ConsList;
 import com.mosaic.lang.Lockable;
 
 import java.util.*;
@@ -16,7 +17,7 @@ public class DecodedResourceCall extends Lockable<DecodedResourceCall> {
     private Class              resourceHandler;
     private Map<String,Object> parameters;
 
-    private List<String>       diagnosticMessages = new ArrayList(3);
+    private ConsList<String>   diagnosticMessages = ConsList.Nil;
 
 
     public DecodedResourceCall( Class resourceHandler ) {
@@ -75,11 +76,11 @@ public class DecodedResourceCall extends Lockable<DecodedResourceCall> {
     public void appendErrorMessage( String msg ) {
         throwIfLocked();
 
-        diagnosticMessages.add( msg );
+        diagnosticMessages = diagnosticMessages.cons( msg );
     }
 
-    public List<String> getDiagnosticMessages() {
-        return Collections.unmodifiableList(diagnosticMessages);
+    public ConsList<String> getDiagnosticMessages() {
+        return diagnosticMessages;
     }
 
     public boolean hasErrored() {

@@ -3,6 +3,7 @@ package framework.river.server.inmemory;
 import com.mosaic.collections.ConsList;
 import com.mosaic.io.StandardStringCodecs;
 import com.mosaic.io.StringCodec;
+import com.mosaic.lang.Failure;
 import com.mosaic.lang.Validate;
 import com.mosaic.lang.functional.*;
 import com.mosaic.utils.ListUtils;
@@ -96,26 +97,7 @@ public class ResourceHandlerRegistry {
         urlFragmentTemplate = urlFragmentTemplate.trim();
 
         if ( urlFragmentTemplate.startsWith("${") ) {
-            if ( !urlFragmentTemplate.endsWith("}") ) {
-                throw new IllegalArgumentException("'"+urlFragmentTemplate+"' needs a closing brace");
-            }
-
-            int lastIndex = urlFragmentTemplate.length() - 1;
-            int splitAt   = urlFragmentTemplate.indexOf(':');
-
-            if ( splitAt > 0 ) {
-                String typeLabel = urlFragmentTemplate.substring(splitAt+1,lastIndex).trim();
-
-                StringCodec codec = codecs.get(typeLabel);
-
-                if ( codec == null ) {
-                    throw new IllegalArgumentException("No codec found for type '"+typeLabel+"'; add one using registerCodec()");
-                }
-
-                return new ExtractParameterNode( urlFragmentTemplate.substring(2,splitAt), codec );
-            } else {
-                return new ExtractParameterNode( urlFragmentTemplate.substring(2, lastIndex) );
-            }
+            return createExtractParameterNodeFromCurlyBracedDescription(urlFragmentTemplate, codecs);
         } else if ( urlFragmentTemplate.startsWith("$") ) {
             return new ExtractParameterNode( urlFragmentTemplate.substring(1) );
         } else {
@@ -124,6 +106,28 @@ public class ResourceHandlerRegistry {
     }
 
 
+    private static RegistryTree createExtractParameterNodeFromCurlyBracedDescription(String urlFragmentTemplate, Map<String, StringCodec> codecs) {
+        if ( !urlFragmentTemplate.endsWith("}") ) {
+            throw new IllegalArgumentException("'"+urlFragmentTemplate+"' needs a closing brace");
+        }
+
+        int lastIndex = urlFragmentTemplate.length() - 1;
+        int splitAt   = urlFragmentTemplate.indexOf(':');
+
+        if ( splitAt > 0 ) {
+            String typeLabel = urlFragmentTemplate.substring(splitAt+1,lastIndex).trim();
+
+            StringCodec codec = codecs.get(typeLabel);
+
+            if ( codec == null ) {
+                throw new IllegalArgumentException("No codec found for type '"+typeLabel+"'; add one using registerCodec()");
+            }
+
+            return new ExtractParameterNode( urlFragmentTemplate.substring(2,splitAt), codec );
+        } else {
+            return new ExtractParameterNode( urlFragmentTemplate.substring(2, lastIndex) );
+        }
+    }
 
 
     private static abstract class RegistryTree {
@@ -171,8 +175,8 @@ public class ResourceHandlerRegistry {
                     TryNbl<DecodedResourceCall> decodedResourceCallNbl = candidateNode.matchURL(urlFragments.tail());
 
                     return decodedResourceCallNbl.flatMapResult(
-                            new Function1<DecodedResourceCall,TryNbl<DecodedResourceCall>>() {
-                                public TryNbl<DecodedResourceCall> invoke( DecodedResourceCall v ) {
+                            new Function1<DecodedResourceCall, TryNbl<DecodedResourceCall>>() {
+                                public TryNbl<DecodedResourceCall> invoke(DecodedResourceCall v) {
                                     return candidateNode.decorateResourceCallResult(v, head);
                                 }
                             }
@@ -181,13 +185,7 @@ public class ResourceHandlerRegistry {
             };
         }
 
-        /**
-         * Invoked on matches to give the node a chance to modify the DecodedResourceCall result.
-         */
-        protected abstract TryNbl<DecodedResourceCall> decorateResourceCallResult( DecodedResourceCall result, String urlFragment );
-
         public abstract boolean matches( String urlFragment );
-
 
         public void addResource( ConsList<String> urlFragmentTemplates, Class<?> resourceClass, Map<String,StringCodec> codecs ) {
             if ( urlFragmentTemplates.isEmpty() ) {
@@ -217,6 +215,14 @@ public class ResourceHandlerRegistry {
         }
 
 
+        /**
+         * Invoked on matches to give the node a chance to modify the DecodedResourceCall result.
+         */
+        protected TryNbl<DecodedResourceCall> decorateResourceCallResult( DecodedResourceCall result, String urlFragment ) {
+            return TryNow.successfulNbl(result);
+        }
+
+
 
         private Nullable<RegistryTree> findFirstMatchingChildFor(final String urlFragmentTemplate) {
             return ListUtils.firstMatch(
@@ -239,10 +245,6 @@ public class ResourceHandlerRegistry {
             throw new UnsupportedOperationException("the RootNode cannot match a url fragment");
         }
 
-        protected TryNbl<DecodedResourceCall> decorateResourceCallResult( DecodedResourceCall result, String urlFragment ) {
-            return TryNow.successfulNbl(result);
-        }
-
     }
 
     private static class MatchStaticTextNode extends RegistryTree {
@@ -259,10 +261,6 @@ public class ResourceHandlerRegistry {
             return targetText.equals(urlFragment);
         }
 
-        protected TryNbl<DecodedResourceCall> decorateResourceCallResult( DecodedResourceCall result, String urlFragment ) {
-            return TryNow.successfulNbl(result);
-        }
-
     }
 
     private static class ExtractParameterNode extends RegistryTree {
@@ -271,7 +269,7 @@ public class ResourceHandlerRegistry {
         private StringCodec codecNbl;
 
         public ExtractParameterNode( String paramName ) {
-            this( paramName, null );
+            this( paramName, StandardStringCodecs.NO_OP_CODEC );
         }
 
         public ExtractParameterNode( String paramName, StringCodec codecNbl) {
@@ -286,23 +284,25 @@ public class ResourceHandlerRegistry {
             return true;
         }
 
-        protected TryNbl<DecodedResourceCall> decorateResourceCallResult( DecodedResourceCall result, String urlFragment ) {
-            Object paramValue = urlFragment;
+        protected TryNbl<DecodedResourceCall> decorateResourceCallResult( final DecodedResourceCall result, String urlFragment ) {
+            Try decodedTry = codecNbl.decode(urlFragment);
 
-            if ( codecNbl != null ) {
-                Try decodedTry = codecNbl.decode(urlFragment);
+            Try<DecodedResourceCall> updatedResultTry = decodedTry.mapResult(new Function1<Object, DecodedResourceCall>() {
+                public DecodedResourceCall invoke(Object paramValue) {
+                    result.appendParameter(key, paramValue);
 
-                if ( decodedTry.hasResult() ) {
-                    paramValue = decodedTry.getResultNoBlock();
-
-                    result.appendParameter( key, paramValue );
-                } else {
-                    result.appendErrorMessage( "Error decoding url parameter '"+key+"': "+decodedTry.getFailureNoBlock().getMessage() );
+                    return result;
                 }
-            } else {
-                result.appendParameter( key, paramValue );
-            }
-            return TryNow.successfulNbl(result);
+            }).recover(new Function1<Failure, DecodedResourceCall>() {
+                public DecodedResourceCall invoke(Failure f) {
+                    result.appendErrorMessage( "Error decoding url parameter '" + key + "': " + f.getMessage() );
+
+                    return result;
+                }
+            });
+
+
+            return updatedResultTry.toTryNbl();
         }
 
     }

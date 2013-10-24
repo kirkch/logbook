@@ -1,6 +1,7 @@
 package framework.river.server.inmemory;
 
 
+import com.mosaic.collections.ConsList;
 import com.mosaic.lang.functional.Nullable;
 import com.mosaic.lang.functional.TryNbl;
 import com.mosaic.utils.MapUtils;
@@ -183,7 +184,7 @@ public class ResourceHandlerRegistryTest {
         Map<String,Object> expectedParams = MapUtils.asMap("user_id", "abc", "audit_id", "012");
         DecodedResourceCall expectedResult = new DecodedResourceCall("/users/abc/audit/012", UserResource.class, expectedParams);
 
-        assertEquals( expectedResult, registry.matchURL("/users/abc/audit/012").getResultNoBlock().getValue() );
+        assertEquals(expectedResult, registry.matchURL("/users/abc/audit/012").getResultNoBlock().getValue());
     }
 
     @Test
@@ -261,19 +262,34 @@ public class ResourceHandlerRegistryTest {
         registry.addResource( "/users/${user_id:int}", UserResource.class );
 
 
-        assertIllegalParam( "/users/42a", UserResource.class, "Error decoding url parameter 'user_id': '42a' is not a valid number" );
+        assertIllegalParam("/users/42a", UserResource.class, "Error decoding url parameter 'user_id': '42a' is not a valid number");
+    }
+
+    @Test
+    public void givenURLWithMultipleIntTypeParams_matchURLWithInvalidInts_expectIllegalParamReports() {
+        registry.addResource( "/users/${user_id:int}/transaction/${transaction_id:int}", UserResource.class );
+
+
+        assertIllegalParam(
+                "/users/42a/transaction/--22",
+                UserResource.class,
+                "Error decoding url parameter 'user_id': '42a' is not a valid number",
+                "Error decoding url parameter 'transaction_id': '--22' is not a valid number"
+        );
     }
 
 
-    private void assertIllegalParam( String relativeUrl, Class<UserResource> userResourceClass, String expectedDiagnosticMessage) {
+    private void assertIllegalParam( String relativeUrl, Class<UserResource> userResourceClass, String...expectedDiagnosticMessages) {
         TryNbl<DecodedResourceCall> matchTryNbl = registry.matchURL( relativeUrl );
 
         assertTrue( matchTryNbl.hasResult() );
 
         DecodedResourceCall match = matchTryNbl.getResultNoBlock().getValue();
+
+        assertEquals( relativeUrl, match.getRelativeURL() );
         assertEquals( userResourceClass, match.getResourceHandler() );
         assertTrue( match.hasErrored() );
-        assertEquals( Arrays.asList(expectedDiagnosticMessage), match.getDiagnosticMessages() );
+        assertEquals( ConsList.newConsList(expectedDiagnosticMessages), match.getDiagnosticMessages() );
     }
 
 }
