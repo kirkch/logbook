@@ -3,10 +3,7 @@ package framework.river.server.inmemory;
 
 import com.mosaic.lang.Lockable;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 
 /**
@@ -18,6 +15,8 @@ public class DecodedResourceCall extends Lockable<DecodedResourceCall> {
     private String             relativeURL;
     private Class              resourceHandler;
     private Map<String,Object> parameters;
+
+    private List<String>       diagnosticMessages = new ArrayList(3);
 
 
     public DecodedResourceCall( Class resourceHandler ) {
@@ -67,10 +66,24 @@ public class DecodedResourceCall extends Lockable<DecodedResourceCall> {
         this.parameters = parameters;
     }
 
-    public void appendParameter( String key, String value ) {
+    public void appendParameter( String key, Object value ) {
         throwIfLocked();
 
         parameters.put( key, value );
+    }
+
+    public void appendErrorMessage( String msg ) {
+        throwIfLocked();
+
+        diagnosticMessages.add( msg );
+    }
+
+    public List<String> getDiagnosticMessages() {
+        return Collections.unmodifiableList(diagnosticMessages);
+    }
+
+    public boolean hasErrored() {
+        return !diagnosticMessages.isEmpty();
     }
 
     public int hashCode() {
@@ -87,18 +100,21 @@ public class DecodedResourceCall extends Lockable<DecodedResourceCall> {
         DecodedResourceCall other = (DecodedResourceCall) o;
         return Objects.equals(this.relativeURL, other.relativeURL)
                 && Objects.equals(this.resourceHandler, other.resourceHandler)
-                && Objects.equals(this.parameters, other.parameters);
+                && Objects.equals(this.parameters, other.parameters)
+                && Objects.equals(this.diagnosticMessages, other.diagnosticMessages);
     }
 
     public String toString() {
         StringBuilder buf = new StringBuilder();
 
-        buf.append( "DecodedResourceCall(" );
+        buf.append( "DecodedResourceCall(relativeURL=" );
         buf.append( relativeURL );
-        buf.append( ", " );
+        buf.append( ", resourceHandler=" );
         buf.append( resourceHandler );
-        buf.append( ", " );
+        buf.append( ", parameters=" );
         buf.append( parameters );
+        buf.append( ", diagnosticMessages=" );
+        buf.append( diagnosticMessages );
         buf.append( ")" );
 
         return buf.toString();

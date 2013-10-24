@@ -7,9 +7,12 @@ import com.mosaic.utils.MapUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.Map;
 
+import static junit.framework.Assert.assertNull;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  *
@@ -122,6 +125,57 @@ public class ResourceHandlerRegistryTest {
     }
 
     @Test
+    public void givenURLWithCurlyBracedParamContainingWhitespace_decodeMatchingParam_expectParamToBeSuppliedInResult() {
+        registry.addResource( "/users/${ user_id }", UserResource.class );
+
+
+        Map<String,Object> expectedParams = MapUtils.asMap("user_id", "abc");
+        DecodedResourceCall expectedResult = new DecodedResourceCall("/users/abc/", UserResource.class, expectedParams);
+
+        assertEquals( expectedResult, registry.matchURL("/users/abc/").getResultNoBlock().getValue() );
+    }
+
+    @Test
+    public void givenURLWithSpaceBeforeAndAfterCurlyBracedParamContainingWhitespace_decodeMatchingParam_expectParamToBeSuppliedInResult() {
+        registry.addResource( "/users/ ${user_id} ", UserResource.class );
+
+
+        Map<String,Object> expectedParams = MapUtils.asMap("user_id", "abc");
+        DecodedResourceCall expectedResult = new DecodedResourceCall("/users/abc/", UserResource.class, expectedParams);
+
+        assertEquals( expectedResult, registry.matchURL("/users/abc/").getResultNoBlock().getValue() );
+    }
+
+    @Test
+    public void givenURLWithMissingCurlyBracedParamName_expectIllegalArgumentException() {
+        try {
+            registry.addResource("/users/${  }", UserResource.class);
+
+            Assert.fail("expected IllegalArgumentException");
+        } catch (IllegalArgumentException e) {
+            Assert.assertEquals("blank parameter names are not supported", e.getMessage());
+        }
+    }
+
+    @Test
+    public void givenURLWithMissingCurlyBrace_expectIllegalArgumentException() {
+        try {
+            registry.addResource("/users/${name", UserResource.class);
+
+            Assert.fail("expected IllegalArgumentException");
+        } catch (IllegalArgumentException e) {
+            Assert.assertEquals("'${name' needs a closing brace", e.getMessage());
+        }
+    }
+
+    @Test
+    public void givenURLWithCurlyBracedParam_decodeMissingParam_expectNoMatch() {
+        registry.addResource( "/users/${user_id}", UserResource.class );
+
+        assertNull(registry.matchURL("/users").getResultNoBlock().getValueNbl());
+    }
+
+    @Test
     public void givenURLWithParams_decodeMatchingParam_expectParamToBeSuppliedInResult() {
         registry.addResource( "/users/${user_id}/audit/$audit_id", UserResource.class );
 
@@ -178,6 +232,48 @@ public class ResourceHandlerRegistryTest {
         DecodedResourceCall expectedResult = new DecodedResourceCall("/users/list/", UsersResource.class);
 
         assertEquals( expectedResult, registry.matchURL("/users/list/").getResultNoBlock().getValue() );
+    }
+
+    @Test
+    public void givenURLWithUnrecognisedTypeParam_expectIAE() {
+        try {
+            registry.addResource("/users/${id:foo}", UserResource.class);
+
+            Assert.fail("expected IllegalArgumentException");
+        } catch (IllegalArgumentException e) {
+            Assert.assertEquals("No codec found for type 'foo'; add one using registerCodec()", e.getMessage());
+        }
+    }
+
+    @Test
+    public void givenURLWithIntTypeParam_matchURL_expectParamToBeDecoded() {
+        registry.addResource( "/users/${user_id:int}", UserResource.class );
+
+
+        Map<String,Object> expectedParams = MapUtils.asMap("user_id", 42);
+        DecodedResourceCall expectedResult = new DecodedResourceCall("/users/42", UserResource.class, expectedParams);
+
+        assertEquals( expectedResult, registry.matchURL("/users/42").getResultNoBlock().getValue() );
+    }
+
+    @Test
+    public void givenURLWithIntTypeParam_matchURLWithInvalidInt_expectIllegalParamReport() {
+        registry.addResource( "/users/${user_id:int}", UserResource.class );
+
+
+        assertIllegalParam( "/users/42a", UserResource.class, "Error decoding url parameter 'user_id': '42a' is not a valid number" );
+    }
+
+
+    private void assertIllegalParam( String relativeUrl, Class<UserResource> userResourceClass, String expectedDiagnosticMessage) {
+        TryNbl<DecodedResourceCall> matchTryNbl = registry.matchURL( relativeUrl );
+
+        assertTrue( matchTryNbl.hasResult() );
+
+        DecodedResourceCall match = matchTryNbl.getResultNoBlock().getValue();
+        assertEquals( userResourceClass, match.getResourceHandler() );
+        assertTrue( match.hasErrored() );
+        assertEquals( Arrays.asList(expectedDiagnosticMessage), match.getDiagnosticMessages() );
     }
 
 }
