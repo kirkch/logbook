@@ -18,7 +18,16 @@ public class RiverRequest {
     private Nullable<String> userIdNbl;
     private Nullable<String> userNameNbl;
 
+    /**
+     * Original, unmodified request path.
+     */
+    private String           requestPath;
+
+    /**
+     * The canonical request path after normalising.
+     */
     private String           resourceRef;
+
     private long             resourceModificationSequence;
 
     private HttpMethodEnum   httpMethod;
@@ -27,6 +36,8 @@ public class RiverRequest {
     private Nullable<DTM>    ifModifiedSinceNbl;
 
     private Map<String,?>    queryParameters = Collections.emptyMap();
+
+
 
     public RiverRequest( DTM startDTM, String requestId, String resourceRef, HttpMethodEnum httpMethod ) {
         this.startDTM    = startDTM;
@@ -95,6 +106,22 @@ public class RiverRequest {
 
     public RiverRequest withUserNameNbl(Nullable<String> userNameNbl) {
         this.userNameNbl = userNameNbl;
+
+        return this;
+    }
+
+
+
+    public String getRequestPath() {
+        return requestPath;
+    }
+
+    public void setRequestPath(String requestPath) {
+        this.requestPath = requestPath;
+    }
+
+    public RiverRequest withRequestPath(String requestPath) {
+        this.requestPath = requestPath;
 
         return this;
     }

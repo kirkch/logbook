@@ -1,4 +1,4 @@
-package framework.river.server.inmemory;
+package framework.river.request;
 
 
 import com.mosaic.collections.ConsList;
@@ -8,7 +8,6 @@ import com.mosaic.utils.MapUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Arrays;
 import java.util.Map;
 
 import static junit.framework.Assert.assertNull;
@@ -220,7 +219,7 @@ public class ResourceHandlerRegistryTest {
             registry.addResource("/users/list", UsersResource.class);
             Assert.fail("expected IllegalStateException");
         } catch (IllegalStateException e) {
-            Assert.assertEquals("'resourceHandler' must be null but was framework.river.server.inmemory.UserResource: 'A resource handler has already been declared'", e.getMessage());
+            Assert.assertEquals("'resourceHandler' must be null but was framework.river.request.UserResource: 'A resource handler has already been declared'", e.getMessage());
         }
     }
 
@@ -245,6 +244,29 @@ public class ResourceHandlerRegistryTest {
             Assert.assertEquals("No codec found for type 'foo'; add one using registerCodec()", e.getMessage());
         }
     }
+
+    //  /users/${user_id:auth}/audit
+    //  /users/${user_id=loggedInUserId}/audit
+
+    // $user_id
+    // ${user_id}
+    // ${user_id:long}
+
+    // ${user_id:long=authId}
+    // ${user_id:long=me -> authId}
+    // {me}
+    // ${me}
+    // {me:auth}
+    // ${me:auth}
+
+    // [me]
+    //
+    // me|{user_id}
+    //
+    // ${user_id -> authId(user_id)}
+    // {authId(user_id)}
+    // ${authId(user_id)}
+    // {authId($user_id)}
 
     @Test
     public void givenURLWithIntTypeParam_matchURL_expectParamToBeDecoded() {

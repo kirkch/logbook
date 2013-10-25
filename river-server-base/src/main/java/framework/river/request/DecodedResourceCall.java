@@ -1,4 +1,4 @@
-package framework.river.server.inmemory;
+package framework.river.request;
 
 
 import com.mosaic.collections.ConsList;
@@ -29,7 +29,7 @@ public class DecodedResourceCall extends Lockable<DecodedResourceCall> {
         this( relativeURL, resourceHandler, new HashMap() );
     }
 
-    public DecodedResourceCall(String relativeURL, Class resourceHandler, Map<String,Object> parameters) {
+    public DecodedResourceCall( String relativeURL, Class resourceHandler, Map<String,Object> parameters ) {
         this.relativeURL     = relativeURL;
         this.resourceHandler = resourceHandler;
         this.parameters      = parameters;

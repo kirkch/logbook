@@ -1,4 +1,4 @@
-package framework.river.server.inmemory;
+package framework.river.request;
 
 import com.mosaic.collections.ConsList;
 import com.mosaic.io.StandardStringCodecs;
@@ -24,10 +24,10 @@ public class ResourceHandlerRegistry {
     private Map<String,StringCodec> codecs   = new HashMap();
 
     public ResourceHandlerRegistry() {
-        registerParameterCodec( "int",    StandardStringCodecs.INTEGER_CODEC );
-        registerParameterCodec( "long",   StandardStringCodecs.LONG_CODEC );
-        registerParameterCodec( "float",  StandardStringCodecs.FLOAT_CODEC );
-        registerParameterCodec( "double", StandardStringCodecs.DOUBLE_CODEC );
+        registerParameterCodec("int", StandardStringCodecs.INTEGER_CODEC);
+        registerParameterCodec("long", StandardStringCodecs.LONG_CODEC);
+        registerParameterCodec("float", StandardStringCodecs.FLOAT_CODEC);
+        registerParameterCodec("double", StandardStringCodecs.DOUBLE_CODEC);
     }
 
 
@@ -313,7 +313,7 @@ public class ResourceHandlerRegistry {
                 }
             }).recover(new Function1<Failure, DecodedResourceCall>() {
                 public DecodedResourceCall invoke(Failure f) {
-                    result.appendErrorMessage( "Error decoding url parameter '" + key + "': " + f.getMessage() );
+                    result.appendErrorMessage("Error decoding url parameter '" + key + "': " + f.getMessage());
 
                     return result;
                 }

@@ -1,5 +1,4 @@
-package framework.river.server.inmemory;
-
+package framework.river.request;
 
 import java.util.Objects;
 
